@@ -47,9 +47,40 @@ else:
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv('.assets/amazon.csv')
-    # Limpeza básica
-    # (vamos adicionar depois)
+    df = pd.read_csv('assets/amazon.csv')
+    # LIMPEZA DOS DADOS
+    
+    # 1. Limpar a coluna 'rating'
+    df['rating'] = df['rating'].astype(str).str.split(',').str[0]
+    df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
+
+    # 2. Limpar 'rating_count'
+    df['rating_count'] = df['rating_count'].astype(str).str.replace(',', '')
+    df['rating_count'] = pd.to_numeric(df['rating_count'], errors='coerce')
+
+    # 3. Limpar 'discounted_price'
+    df['discounted_price'] = df['discounted_price'].astype(str).str.replace('₹', '')
+    df['discounted_price'] = df['discounted_price'].str.replace(',', '')
+    df['discounted_price'] = pd.to_numeric(df['discounted_price'], errors='coerce')
+
+    # 4. Limpar 'actual_price'
+    df['discounted_price'] = df['discounted_price'].astype(str).str.replace('₹', '')
+    df['discounted_price'] = df['discounted_price'].str.replace(',', '')
+    df['discounted_price'] = pd.to_numeric(df['discounted_price'], errors='coerce')
+    
+    # 5. Limpar 'discount_percentage'
+    df['discount_percentage'] = df['discount_percentage'].astype(str).str.replace('%', '')
+    df['discount_percentage'] = pd.to_numeric(df['discount_percentage'], errors='coerce')
+
+    # 6. Remover linhs com vallores nulos nas colunas essenciais
+    df = df.dropna(subset=['rating', 'discounted_price', 'product_name'])
+
+    # 7. Garantir que rating esteja entre 0 e 5
+    df = df[df['rating'] <= 5]
+
+    # 8. Remover preços negativos ou zero
+    df = df[df['discounted_price'] > 0]
+
     return df
 
 df = load_data()
