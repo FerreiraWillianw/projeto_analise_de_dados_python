@@ -16,69 +16,71 @@ st.set_page_config(
 )
 
 # =====================================
-# TEMA (CLARO / ESCURO)
+# TEMA (FIXO - ESCURO)
 # =====================================
 
-if 'theme' not in st.session_state:
-    st.session_state['theme'] = 'dark'
+primary_color = "#00FF00"
+bg_color = "#0E1117"
+text_color = "#FFFFFF"
+plotly_template = "plotly_dark"
 
-def toogle_theme():
-    st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
-
-# Sidebar com toggle de tema
-with st.sidebar:
-    st.button("Alterar Tema", on_click=toogle_theme)
-    st.markdown("---")
-
-# Aplicar tema baseado na escolha do usuário
-if st.session_state.theme == 'dark':
-    primary_color = "#00FF00" # Verde Vibrante
-    bg_color = "#0E1117" # Preto Profundo
-    text_color = "#FFFFFF" # Branco Puro
-else:
-    primary_color = "#FF4B4B" # Vermelho Vibrante
-    bg_color = "#FFFFFF" # Branco Puro
-    text_color = "#000000" # Preto Puro
-
+# CSS mínimo para o slider
+st.markdown("""
+    <style>
+    input[type="range"] {
+        accent-color: #00FF00 !important;
+    }
+    .stSlider label {
+        color: #FFFFFF !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # =========================================
-# CARREGAR DADOS (cache para performance)
+# CARREGAR DADOS
 # =========================================
 
 @st.cache_data
 def load_data():
     df = pd.read_csv('assets/amazon.csv')
-    # LIMPEZA DOS DADOS
     
-    # 1. Limpar a coluna 'rating'
+    # Extrair apenas a categoria principal
+    df['category'] = df['category'].astype(str).str.split('|').str[0]
+    
+    # Limpar rating
     df['rating'] = df['rating'].astype(str).str.split(',').str[0]
     df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
 
-    # 2. Limpar 'rating_count'
+    # Limpar rating_count
     df['rating_count'] = df['rating_count'].astype(str).str.replace(',', '')
     df['rating_count'] = pd.to_numeric(df['rating_count'], errors='coerce')
+    df = df.dropna(subset=['rating_count'])
 
-    # 3. Limpar 'discounted_price'
-    df['discounted_price'] = df['discounted_price'].astype(str).str.replace('₹', '')
+    # Limpar discounted_price
+    df['discounted_price'] = df['discounted_price'].astype(str)
+    df['discounted_price'] = df['discounted_price'].str.replace('â‚¹', '')
+    df['discounted_price'] = df['discounted_price'].str.replace('₹', '')
     df['discounted_price'] = df['discounted_price'].str.replace(',', '')
     df['discounted_price'] = pd.to_numeric(df['discounted_price'], errors='coerce')
 
-    # 4. Limpar 'actual_price'
-    df['discounted_price'] = df['discounted_price'].astype(str).str.replace('₹', '')
-    df['discounted_price'] = df['discounted_price'].str.replace(',', '')
-    df['discounted_price'] = pd.to_numeric(df['discounted_price'], errors='coerce')
-    
-    # 5. Limpar 'discount_percentage'
+    # Limpar actual_price
+    df['actual_price'] = df['actual_price'].astype(str)
+    df['actual_price'] = df['actual_price'].str.replace('â‚¹', '')
+    df['actual_price'] = df['actual_price'].str.replace('₹', '')
+    df['actual_price'] = df['actual_price'].str.replace(',', '')
+    df['actual_price'] = pd.to_numeric(df['actual_price'], errors='coerce')
+
+    # Limpar discount_percentage
     df['discount_percentage'] = df['discount_percentage'].astype(str).str.replace('%', '')
     df['discount_percentage'] = pd.to_numeric(df['discount_percentage'], errors='coerce')
 
-    # 6. Remover linhs com vallores nulos nas colunas essenciais
-    df = df.dropna(subset=['rating', 'discounted_price', 'product_name'])
+    # Remover linhas com valores nulos
+    df = df.dropna(subset=['rating', 'discounted_price', 'product_name', 'category'])
 
-    # 7. Garantir que rating esteja entre 0 e 5
+    # Garantir que rating esteja entre 0 e 5
     df = df[df['rating'] <= 5]
 
-    # 8. Remover preços negativos ou zero
+    # Remover preços negativos ou zero
     df = df[df['discounted_price'] > 0]
 
     return df
@@ -86,13 +88,12 @@ def load_data():
 df = load_data()
 
 # =========================================
-# FILTROS LATERAIS
+# FILTROS
 # =========================================
 
 with st.sidebar:
     st.header("🔍 Filtros")
 
-    # Filtro por categoria
     categorias = sorted(df['category'].unique())
     selected_categories = st.multiselect(
         "Categorias",
@@ -100,11 +101,18 @@ with st.sidebar:
         default=categorias[:5] if len(categorias) > 5 else categorias
     )
 
-    # Filtro por rating mínimo
-    min_rating = st.slider("Rating mínimo", 0.0, 5.0, 3.0, 0.1)
-
-    # Filtro por preço máximo
-    max_price = st.slider("Preço máximo (₹)", 0, 50000, 50000, 1000)
+    min_rating = st.slider("⭐ Rating mínimo", 0.0, 5.0, 3.0, 0.1)
+    
+    min_preco = int(df['discounted_price'].min())
+    max_preco = int(df['discounted_price'].max())
+    
+    max_price = st.slider(
+        "💰 Preço máximo (₹)",
+        min_value=min_preco,
+        max_value=max_preco,
+        value=max_preco,
+        step=500
+    )
 
     st.markdown("---")
     st.caption(f"Dados: Amazon India | Produtos: {len(df):,}")
@@ -117,14 +125,14 @@ df_filtered = df[
 ]
 
 # =========================================
-# TÍTULO PRINCIPAL
+# TÍTULO
 # =========================================
 st.title("📊 Análise de Produtos Eletrônicos - Amazon India")
-st.markdown(f"<small>Produtos analisados: {len(df_filtered):,} | Tema: {st.session_state.theme}</small>", unsafe_allow_html=True)
+st.markdown(f"<small>Produtos analisados: {len(df_filtered):,}</small>", unsafe_allow_html=True)
 st.markdown("---")
 
 # =========================================
-# ABAS
+# ABAS (AGUARDANDO GRÁFICOS)
 # =========================================
 tab1, tab2, tab3, tab4 = st.tabs([
     "📈 Visão Geral",
@@ -135,20 +143,33 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 with tab1:
     st.header("Visão Geral do Dataset")
-    st.info("Aqui virão os KPIs e gráficos principais. Vamos preencher no próximo passo.")
+    
+    # KPIs
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("📦 Total de Produtos", f"{len(df_filtered):,}")
+    with col2:
+        st.metric("⭐ Rating Médio", f"{df_filtered['rating'].mean():.1f}")
+    with col3:
+        st.metric("💰 Preço Médio", f"₹{df_filtered['discounted_price'].mean():,.0f}")
+    with col4:
+        st.metric("🎯 Desconto Médio", f"{df_filtered['discount_percentage'].mean():.0f}%")
+    
+    st.markdown("---")
+    st.info("📊 Gráficos serão adicionados em breve.")
 
 with tab2:
     st.header("Relação entre Preço e Avaliações")
-    st.info("Gráfico de dispersão e correlação entre preço e rating.")
+    st.info("📊 Gráficos serão adicionados em breve.")
 
 with tab3:
     st.header("Performance por Categoria")
-    st.info("Métricas agregadas por categoria.")
+    st.info("📊 Gráficos serão adicionados em breve.")
 
 with tab4:
-    st.header("Análise de Sentimentos dos Reviews")
-    st.info("Nuvem de palavras e análise de texto das avaliações.")
+    st.header("Análise de Sentimentos das Reviews")
+    st.info("📊 Gráficos serão adicionados em breve.")
 
 # Rodapé
 st.markdown("---")
-st.caption("Dashboard desenvolvido por Willian Ferreira com Streamlit | Dados: Amazon India")
+st.caption("Dashboard desenvolvido por Willian Ferreira | Dados: Amazon India")
