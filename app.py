@@ -111,12 +111,21 @@ fig_produtos = px.bar(
     produtos_por_categoria,
     x='Quantidade',
     y='Categoria',
-    orientation='h', # Gráfico na horizontal para os nomes longos não cortarem
+    orientation='h',
     title="Total de Produtos Listados por Categoria Principal",
     labels={'Quantidade': 'Número de Produtos', 'Categoria': 'Categoria'},
-    template='plotly_white', # Usa um fundo limpo e elegante
-    color='Quantidade', # Muda de cor conforme o volume de produtos
-    color_continuous_scale='Blues' # Gradiente de azul para combinar com a Amazon
+    # Usamos o template escuro do Plotly para os textos do gráfico ficarem brancos automaticamente
+    template='plotly_dark', 
+    color='Quantidade',
+    # Criamos um degradê que vai do cinza escuro do cartão até o Laranja Amazon
+    color_continuous_scale=['#1F2633', '#FF9900'] 
+)
+
+# Esse comando extra serve para garantir que o fundo interno do gráfico fique transparente, 
+# misturando-se perfeitamente com o fundo escuro do seu aplicativo do Streamlit
+fig_produtos.update_layout(
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)'
 )
 
 # Ajustamos o layout para o gráfico ficar ordenado corretamente

@@ -1,3 +1,15 @@
 [theme]
-base = "dark"
-primaryColor = "#00FF00"
+# Cor principal de destaque (Laranja Amazon para botões e links)
+primaryColor = "#FF9900"
+
+# Cor de fundo da área principal do dashboard (Preto/Azul Escuro Cósmico)
+backgroundColor = "#141923"
+
+# Cor de fundo dos cartões e caixas de texto (Um tom um pouco mais claro de cinza/azul para dar relevo)
+secondaryBackgroundColor = "#1F2633"
+
+# Cor padrão dos textos do dashboard (Branco puro para dar contraste no fundo escuro)
+textColor = "#FFFFFF"
+
+# Fonte padrão do sistema
+font = "sans serif"
